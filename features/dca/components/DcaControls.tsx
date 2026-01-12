@@ -52,6 +52,16 @@ interface DcaControlsProps {
     setUseVixRule: (val: boolean) => void;
     useSellInMay: boolean;
     setUseSellInMay: (val: boolean) => void;
+    useDrawdownRule: boolean;
+    setUseDrawdownRule: (val: boolean) => void;
+    useMacdStrategy: boolean;
+    setUseMacdStrategy: (val: boolean) => void;
+    macdMultiplier: number;
+    setMacdMultiplier: (val: number) => void;
+    useBollingerBand: boolean;
+    setUseBollingerBand: (val: boolean) => void;
+    bollingerMultiplier: number;
+    setBollingerMultiplier: (val: number) => void;
 
     // Configuration
     indicatorTimeframe: 'daily' | 'weekly' | 'monthly';
@@ -68,6 +78,20 @@ interface DcaControlsProps {
     setVixMultiplier: (val: number) => void;
     vixThreshold: number;
     setVixThreshold: (val: number) => void;
+
+    // Drawdown Config
+    drawdownThreshold1: number;
+    setDrawdownThreshold1: (val: number) => void;
+    drawdownThreshold2: number;
+    setDrawdownThreshold2: (val: number) => void;
+    drawdownThreshold3: number;
+    setDrawdownThreshold3: (val: number) => void;
+    drawdownMultiplier1: number;
+    setDrawdownMultiplier1: (val: number) => void;
+    drawdownMultiplier2: number;
+    setDrawdownMultiplier2: (val: number) => void;
+    drawdownMultiplier3: number;
+    setDrawdownMultiplier3: (val: number) => void;
 
     // Portfolio Integration
     usePortfolio: boolean;
@@ -94,13 +118,25 @@ const DcaControls: React.FC<DcaControlsProps> = ({
     useRsiRule, setUseRsiRule,
     useVixRule, setUseVixRule,
     useSellInMay, setUseSellInMay,
+    useMacdStrategy, setUseMacdStrategy,
+    macdMultiplier, setMacdMultiplier,
+    useBollingerBand, setUseBollingerBand,
+    bollingerMultiplier, setBollingerMultiplier,
     indicatorTimeframe, setIndicatorTimeframe,
     sma20Multiplier, setSma20Multiplier,
     sma50Multiplier, setSma50Multiplier,
     sma100Multiplier, setSma100Multiplier,
     sma200Multiplier, setSma200Multiplier,
     vixMultiplier, setVixMultiplier,
+
     vixThreshold, setVixThreshold,
+    useDrawdownRule, setUseDrawdownRule,
+    drawdownThreshold1, setDrawdownThreshold1,
+    drawdownThreshold2, setDrawdownThreshold2,
+    drawdownThreshold3, setDrawdownThreshold3,
+    drawdownMultiplier1, setDrawdownMultiplier1,
+    drawdownMultiplier2, setDrawdownMultiplier2,
+    drawdownMultiplier3, setDrawdownMultiplier3,
     usePortfolio, setUsePortfolio,
     backendStatus, portfolioTxsCount,
     runBacktest, isLoading, error
@@ -130,26 +166,63 @@ const DcaControls: React.FC<DcaControlsProps> = ({
                             <SelectTrigger className="glass-input h-10 font-medium">
                                 <SelectValue placeholder="Choisir un actif" />
                             </SelectTrigger>
-                            <SelectContent className="glass-panel border-white/10">
+                            <SelectContent className="glass-panel border-white/10 max-h-[400px]">
                                 <SelectGroup>
-                                    <SelectLabel>🪙 Crypto</SelectLabel>
+                                    <SelectLabel className="text-muted-foreground font-bold mt-2">📊 Indices Majeurs</SelectLabel>
+                                    <SelectItem value="^GSPC">S&P 500 (^GSPC)</SelectItem>
+                                    <SelectItem value="^NDX">Nasdaq 100 (^NDX)</SelectItem>
+                                    <SelectItem value="^FCHI">CAC 40 (^FCHI)</SelectItem>
+                                    <SelectItem value="^STOXX50E">Euro Stoxx 50 (^STOXX50E)</SelectItem>
+                                </SelectGroup>
+                                <Separator className="bg-white/5 my-1" />
+                                <SelectGroup>
+                                    <SelectLabel className="text-muted-foreground font-bold">🇺🇸 Actions US (Tech & Growth)</SelectLabel>
+                                    <SelectItem value="NVDA">NVIDIA (NVDA)</SelectItem>
+                                    <SelectItem value="TSLA">Tesla (TSLA)</SelectItem>
+                                    <SelectItem value="AAPL">Apple (AAPL)</SelectItem>
+                                    <SelectItem value="MSFT">Microsoft (MSFT)</SelectItem>
+                                    <SelectItem value="GOOGL">Google (GOOGL)</SelectItem>
+                                    <SelectItem value="AMZN">Amazon (AMZN)</SelectItem>
+                                    <SelectItem value="META">Meta (META)</SelectItem>
+                                    <SelectItem value="MSTR">MicroStrategy (MSTR)</SelectItem>
+                                    <SelectItem value="COIN">Coinbase (COIN)</SelectItem>
+                                    <SelectItem value="PLTR">Palantir (PLTR)</SelectItem>
+                                </SelectGroup>
+                                <Separator className="bg-white/5 my-1" />
+                                <SelectGroup>
+                                    <SelectLabel className="text-muted-foreground font-bold">🇪🇺 Actions Europe (Blue Chips)</SelectLabel>
+                                    <SelectItem value="MC.PA">LVMH (MC.PA)</SelectItem>
+                                    <SelectItem value="TTE.PA">TotalEnergies (TTE.PA)</SelectItem>
+                                    <SelectItem value="AI.PA">Air Liquide (AI.PA)</SelectItem>
+                                    <SelectItem value="RMS.PA">Hermès (RMS.PA)</SelectItem>
+                                    <SelectItem value="OR.PA">L'Oréal (OR.PA)</SelectItem>
+                                    <SelectItem value="ASML.AS">ASML Holding (ASML)</SelectItem>
+                                    <SelectItem value="SAP">SAP SE (SAP)</SelectItem>
+                                </SelectGroup>
+                                <Separator className="bg-white/5 my-1" />
+                                <SelectGroup>
+                                    <SelectLabel className="text-muted-foreground font-bold">🪙 Crypto Assets</SelectLabel>
                                     <SelectItem value="BTC-USD">Bitcoin (BTC)</SelectItem>
                                     <SelectItem value="ETH-USD">Ethereum (ETH)</SelectItem>
                                     <SelectItem value="SOL-USD">Solana (SOL)</SelectItem>
+                                    <SelectItem value="ADA-USD">Cardano (ADA)</SelectItem>
                                     <SelectItem value="TAO-USD">Bittensor (TAO)</SelectItem>
                                     <SelectItem value="SUI-USD">Sui (SUI)</SelectItem>
+                                    <SelectItem value="ONDO-USD">Ondo (ONDO)</SelectItem>
+                                    <SelectItem value="LINK-USD">Chainlink (LINK)</SelectItem>
+                                    <SelectItem value="AAVE-USD">Aave (AAVE)</SelectItem>
+                                    <SelectItem value="RNDR-USD">Render (RNDR)</SelectItem>
                                 </SelectGroup>
+                                <Separator className="bg-white/5 my-1" />
                                 <SelectGroup>
-                                    <SelectLabel>📊 ETF S&P500</SelectLabel>
-                                    <SelectItem value="SPY">S&P 500 (SPY)</SelectItem>
+                                    <SelectLabel className="text-muted-foreground font-bold">🌍 ETFs (Trackers)</SelectLabel>
+                                    <SelectItem value="CW8.PA">Amundi MSCI World (CW8)</SelectItem>
+                                    <SelectItem value="SPY">SPDR S&P 500 (SPY)</SelectItem>
                                     <SelectItem value="VOO">Vanguard S&P 500 (VOO)</SelectItem>
-                                    <SelectItem value="QQQ">Nasdaq 100 (QQQ)</SelectItem>
-                                </SelectGroup>
-                                <SelectGroup>
-                                    <SelectLabel>🌍 ETF World & Others</SelectLabel>
-                                    <SelectItem value="CW8.PA">MSCI World (CW8.PA)</SelectItem>
-                                    <SelectItem value="IBIT">iShares Bitcoin (IBIT)</SelectItem>
+                                    <SelectItem value="QQQ">Invesco QQQ (Nasdaq)</SelectItem>
+                                    <SelectItem value="IBIT">iShares Bitcoin ETF (IBIT)</SelectItem>
                                     <SelectItem value="GLUX">Amundi Luxury (GLUX)</SelectItem>
+                                    <SelectItem value="URTH">iShares MSCI World (URTH)</SelectItem>
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
@@ -313,6 +386,27 @@ const DcaControls: React.FC<DcaControlsProps> = ({
                                             </div>
                                             <div className="text-[10px] text-muted-foreground leading-tight">Panic buy (Volatilité)</div>
                                         </div>
+                                        <div className={`flex flex-col gap-2 p-3 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] active:scale-95 ${useDrawdownRule ? 'bg-pink-500/10 border-pink-500/50' : 'bg-background/40 border-white/5 hover:bg-background/60'}`}>
+                                            <div className="flex justify-between items-start">
+                                                <Label htmlFor="drawdown" className={`cursor-pointer font-bold text-xs ${useDrawdownRule ? 'text-pink-400' : 'text-muted-foreground'}`}>Drawdown</Label>
+                                                <Checkbox id="drawdown" checked={useDrawdownRule} onCheckedChange={(c) => setUseDrawdownRule(c as boolean)} className="data-[state=checked]:bg-pink-500 data-[state=checked]:border-pink-500 h-4 w-4" />
+                                            </div>
+                                            <div className="text-[10px] text-muted-foreground leading-tight">Buy the Dip (ATH)</div>
+                                        </div>
+                                        <div className={`flex flex-col gap-2 p-3 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] active:scale-95 ${useMacdStrategy ? 'bg-pink-500/10 border-pink-500/50' : 'bg-background/40 border-white/5 hover:bg-background/60'}`}>
+                                            <div className="flex justify-between items-start">
+                                                <Label htmlFor="macd" className={`cursor-pointer font-bold text-xs ${useMacdStrategy ? 'text-pink-400' : 'text-muted-foreground'}`}>MACD Reversal</Label>
+                                                <Checkbox id="macd" checked={useMacdStrategy} onCheckedChange={(c) => setUseMacdStrategy(c as boolean)} className="data-[state=checked]:bg-pink-500 data-[state=checked]:border-pink-500 h-4 w-4" />
+                                            </div>
+                                            <div className="text-[10px] text-muted-foreground leading-tight">Retournement de tendance</div>
+                                        </div>
+                                        <div className={`flex flex-col gap-2 p-3 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] active:scale-95 ${useBollingerBand ? 'bg-orange-500/10 border-orange-500/50' : 'bg-background/40 border-white/5 hover:bg-background/60'}`}>
+                                            <div className="flex justify-between items-start">
+                                                <Label htmlFor="bollinger" className={`cursor-pointer font-bold text-xs ${useBollingerBand ? 'text-orange-400' : 'text-muted-foreground'}`}>Bollinger Bands</Label>
+                                                <Checkbox id="bollinger" checked={useBollingerBand} onCheckedChange={(c) => setUseBollingerBand(c as boolean)} className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500 h-4 w-4" />
+                                            </div>
+                                            <div className="text-[10px] text-muted-foreground leading-tight">Achat sur écart-type</div>
+                                        </div>
                                     </div>
 
                                     {/* Sell in May */}
@@ -331,6 +425,8 @@ const DcaControls: React.FC<DcaControlsProps> = ({
                                             { active: useSma50Rule, label: 'SMA 50 Multiplier', color: 'teal', val: sma50Multiplier, set: setSma50Multiplier },
                                             { active: useSmaRule, label: 'SMA 100 Multiplier', color: 'blue', val: sma100Multiplier, set: setSma100Multiplier },
                                             { active: useSma200Rule, label: 'SMA 200 Multiplier', color: 'purple', val: sma200Multiplier, set: setSma200Multiplier },
+                                            { active: useMacdStrategy, label: 'MACD Multiplier', color: 'pink', val: macdMultiplier, set: setMacdMultiplier },
+                                            { active: useBollingerBand, label: 'Bollinger Multiplier', color: 'orange', val: bollingerMultiplier, set: setBollingerMultiplier },
                                             { active: useVixRule, label: 'VIX Multiplier', color: 'red', val: vixMultiplier, set: setVixMultiplier },
                                         ].map((item, i) => item.active && (
                                             <div key={i} className={`bg-${item.color}-500/5 border border-${item.color}-500/20 rounded-xl p-4 space-y-4`}>
@@ -363,6 +459,109 @@ const DcaControls: React.FC<DcaControlsProps> = ({
                                                     step={5}
                                                     className="[&_[role=slider]]:bg-orange-500 cursor-pointer"
                                                 />
+                                            </div>
+                                        )}
+
+                                        {/* Drawdown Config Section */}
+                                        {useDrawdownRule && (
+                                            <div className="col-span-full space-y-4 pt-4 border-t border-white/5">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="text-sm font-bold text-pink-400">🔻 Configuration Buy the Dip (Accumulation sur Drawdown)</span>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    {/* Tier 1 */}
+                                                    <div className="bg-pink-500/5 border border-pink-500/20 rounded-xl p-3 space-y-3">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-xs font-bold text-pink-300">Tier 1: Chute légère</span>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                                                                <span>Seuil Drop</span>
+                                                                <span className="text-pink-400 font-bold">-{drawdownThreshold1}%</span>
+                                                            </div>
+                                                            <Slider
+                                                                value={[drawdownThreshold1]}
+                                                                onValueChange={(val) => setDrawdownThreshold1(val[0])}
+                                                                min={5} max={15} step={1}
+                                                                className="[&_[role=slider]]:bg-pink-500"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                                                                <span>Multiplicateur</span>
+                                                                <span className="text-pink-400 font-bold">x{drawdownMultiplier1}</span>
+                                                            </div>
+                                                            <Slider
+                                                                value={[drawdownMultiplier1]}
+                                                                onValueChange={(val) => setDrawdownMultiplier1(val[0])}
+                                                                min={1} max={5} step={0.5}
+                                                                className="[&_[role=slider]]:bg-pink-500"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Tier 2 */}
+                                                    <div className="bg-pink-500/5 border border-pink-500/20 rounded-xl p-3 space-y-3">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-xs font-bold text-pink-300">Tier 2: Correction</span>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                                                                <span>Seuil Drop</span>
+                                                                <span className="text-pink-400 font-bold">-{drawdownThreshold2}%</span>
+                                                            </div>
+                                                            <Slider
+                                                                value={[drawdownThreshold2]}
+                                                                onValueChange={(val) => setDrawdownThreshold2(val[0])}
+                                                                min={15} max={25} step={1}
+                                                                className="[&_[role=slider]]:bg-pink-500"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                                                                <span>Multiplicateur</span>
+                                                                <span className="text-pink-400 font-bold">x{drawdownMultiplier2}</span>
+                                                            </div>
+                                                            <Slider
+                                                                value={[drawdownMultiplier2]}
+                                                                onValueChange={(val) => setDrawdownMultiplier2(val[0])}
+                                                                min={1} max={5} step={0.5}
+                                                                className="[&_[role=slider]]:bg-pink-500"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Tier 3 */}
+                                                    <div className="bg-pink-500/5 border border-pink-500/20 rounded-xl p-3 space-y-3">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-xs font-bold text-pink-300">Tier 3: Crash</span>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                                                                <span>Seuil Drop</span>
+                                                                <span className="text-pink-400 font-bold">-{drawdownThreshold3}%</span>
+                                                            </div>
+                                                            <Slider
+                                                                value={[drawdownThreshold3]}
+                                                                onValueChange={(val) => setDrawdownThreshold3(val[0])}
+                                                                min={25} max={90} step={5}
+                                                                className="[&_[role=slider]]:bg-pink-500"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                                                                <span>Multiplicateur</span>
+                                                                <span className="text-pink-400 font-bold">x{drawdownMultiplier3}</span>
+                                                            </div>
+                                                            <Slider
+                                                                value={[drawdownMultiplier3]}
+                                                                onValueChange={(val) => setDrawdownMultiplier3(val[0])}
+                                                                min={1} max={10} step={0.5}
+                                                                className="[&_[role=slider]]:bg-pink-500"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
                                     </div>

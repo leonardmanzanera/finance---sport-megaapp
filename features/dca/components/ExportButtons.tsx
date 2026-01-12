@@ -1,3 +1,4 @@
+import React from 'react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { exportToCsv } from '../utils/exportCsv';
 import PdfReport from './PdfReport';

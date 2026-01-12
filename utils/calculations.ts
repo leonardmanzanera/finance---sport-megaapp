@@ -404,6 +404,110 @@ export const calculateRSI = (prices: number[], period: number = 14): number[] =>
 };
 
 /**
+ * Calculate MACD (Moving Average Convergence Divergence)
+ *
+ * Formula:
+ * MACD Line = 12-period EMA - 26-period EMA
+ * Signal Line = 9-period EMA of MACD Line
+ * Histogram = MACD Line - Signal Line
+ */
+export interface MacdResult {
+  macd: number;
+  signal: number;
+  histogram: number;
+}
+
+export const calculateMACD = (
+  prices: number[],
+  fastPeriod: number = 12,
+  slowPeriod: number = 26,
+  signalPeriod: number = 9
+): MacdResult[] => {
+  const fastEMA = calculateEMA(prices, fastPeriod);
+  const slowEMA = calculateEMA(prices, slowPeriod);
+
+  const macdLine: number[] = [];
+  for (let i = 0; i < prices.length; i++) {
+    macdLine.push(fastEMA[i] - slowEMA[i]);
+  }
+
+  const signalLine = calculateEMA(macdLine, signalPeriod);
+
+  const results: MacdResult[] = [];
+  for (let i = 0; i < prices.length; i++) {
+    results.push({
+      macd: macdLine[i],
+      signal: signalLine[i],
+      histogram: macdLine[i] - signalLine[i],
+    });
+  }
+
+  return results;
+};
+
+/**
+ * Calculate Rolling Standard Deviation
+ * 
+ * @param prices - Array of prices
+ * @param period - Window size
+ * @returns Array of standard deviation values
+ */
+export const calculateStdDev = (prices: number[], period: number): number[] => {
+  const stdDevs: number[] = [];
+
+  for (let i = 0; i < prices.length; i++) {
+    if (i < period - 1) {
+      stdDevs.push(0);
+      continue;
+    }
+
+    const slice = prices.slice(i - period + 1, i + 1);
+    const mean = slice.reduce((sum, p) => sum + p, 0) / period;
+    const variance = slice.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) / period;
+    stdDevs.push(Math.sqrt(variance));
+  }
+
+  return stdDevs;
+};
+
+export interface BollingerBands {
+  upper: number[];
+  middle: number[];
+  lower: number[];
+}
+
+/**
+ * Calculate Bollinger Bands
+ * 
+ * Formula:
+ * Middle = SMA(period)
+ * Upper = Middle + (multiplier * StdDev)
+ * Lower = Middle - (multiplier * StdDev)
+ * 
+ * @param prices - Array of prices
+ * @param period - Period for SMA and StdDev (default 20)
+ * @param multiplier - Standard deviation multiplier (default 2)
+ */
+export const calculateBollingerBands = (
+  prices: number[],
+  period: number = 20,
+  multiplier: number = 2
+): BollingerBands => {
+  const middle = calculateSMA(prices, period);
+  const stdDevs = calculateStdDev(prices, period);
+
+  const upper: number[] = [];
+  const lower: number[] = [];
+
+  for (let i = 0; i < prices.length; i++) {
+    upper.push(middle[i] + (multiplier * stdDevs[i]));
+    lower.push(middle[i] - (multiplier * stdDevs[i]));
+  }
+
+  return { upper, middle, lower };
+};
+
+/**
  * Resample daily prices to weekly (using Friday close)
  * Returns array of weekly closing prices with their dates
  */

@@ -18,7 +18,10 @@ import {
   calculateSMA,
   calculateRSI,
   resampleToWeekly,
-  resampleToMonthly
+  resampleToMonthly,
+  calculateMACD,
+  MacdResult,
+  calculateBollingerBands
 } from '../../utils/calculations';
 
 const BACKEND_URL = 'http://localhost:3001';
@@ -150,14 +153,29 @@ const DcaBacktester: React.FC = () => {
   const [useDcaStrict, setUseDcaStrict] = useState<boolean>(false);
   const [indicatorTimeframe, setIndicatorTimeframe] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [useSellInMay, setUseSellInMay] = useState<boolean>(false);
+  const [useDrawdownRule, setUseDrawdownRule] = useState<boolean>(false);
+  const [useMacdStrategy, setUseMacdStrategy] = useState<boolean>(false);
+  const [useBollingerBand, setUseBollingerBand] = useState<boolean>(false);
 
   // Configurable multipliers for Smart DCA rules
   const [sma20Multiplier, setSma20Multiplier] = useState<number>(2);
   const [sma50Multiplier, setSma50Multiplier] = useState<number>(2);
   const [sma100Multiplier, setSma100Multiplier] = useState<number>(2);
   const [sma200Multiplier, setSma200Multiplier] = useState<number>(2);
-  const [vixMultiplier, setVixMultiplier] = useState<number>(3);
+
+  const [vixBenchmark, setVixBenchmark] = useState<number>(30); // Use 30 as simple threshold default
   const [vixThreshold, setVixThreshold] = useState<number>(40);
+  const [vixMultiplier, setVixMultiplier] = useState<number>(1.5);
+
+  // Drawdown Strategy Config
+  const [drawdownThreshold1, setDrawdownThreshold1] = useState<number>(10);
+  const [drawdownMultiplier1, setDrawdownMultiplier1] = useState<number>(1.5);
+  const [drawdownThreshold2, setDrawdownThreshold2] = useState<number>(20);
+  const [drawdownMultiplier2, setDrawdownMultiplier2] = useState<number>(2.0);
+  const [drawdownThreshold3, setDrawdownThreshold3] = useState<number>(30);
+  const [drawdownMultiplier3, setDrawdownMultiplier3] = useState<number>(3.0);
+  const [macdMultiplier, setMacdMultiplier] = useState<number>(3);
+  const [bollingerMultiplier, setBollingerMultiplier] = useState<number>(2);
 
   // Data state
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -359,6 +377,26 @@ const DcaBacktester: React.FC = () => {
       // Fetch VIX data
       const vixMap = await fetchVixData(startDate);
 
+      // Calculate MACD for all prices
+      const macdResults = calculateMACD(allPriceValues);
+      const macdReversalMap = new Map<string, boolean>();
+
+      // Pre-calculate MACD Reversal condition
+      // Condition: Histogram < 0 AND Histogram > PreviousHistogram (Convergence)
+      for (let i = 1; i < allPrices.length; i++) {
+        const current = macdResults[i];
+        const prev = macdResults[i - 1];
+        const isReversal = current.histogram < 0 && current.histogram > prev.histogram;
+        macdReversalMap.set(allPrices[i].date, isReversal);
+      }
+
+      // Calculate Bollinger Bands (Standard 20, 2)
+      const { lower: lowerBands } = calculateBollingerBands(allPriceValues, 20, 2);
+      const bollingerLowerMap = new Map<string, number>();
+      allPrices.forEach((p, i) => {
+        bollingerLowerMap.set(p.date, lowerBands[i]);
+      });
+
       const data: MarketDataPoint[] = prices.map((p, i) => {
         if (weeklyRsiMap.has(p.date)) {
           lastRsi = weeklyRsiMap.get(p.date)!;
@@ -495,12 +533,31 @@ const DcaBacktester: React.FC = () => {
           lastDcaIndex = dcaDateIndex + 1;
         }
 
+
+        // Pre-calculate ATH Map using all available historical data (allPrices)
+        // This ensures the ATH is accurate even if startDate is recent
+        const athMap = new Map<string, number>();
+        let runningMax = 0;
+        allPrices.forEach(p => {
+          if (p.price > runningMax) runningMax = p.price;
+          athMap.set(p.date, runningMax);
+        });
+
         filteredDates.forEach((pt) => {
           let amount = baseAmount;
           let multiplier = 1;
           const reasons: string[] = [];
           const month = new Date(pt.date).getMonth();
           const isSummerMonth = month >= 4 && month <= 7; // May(4) to August(7)
+
+          // Drawdown Calculation (ATH from full history)
+          // We need the ATH up to this specific date.
+          // Since we might not have a full map, let's find it efficiently.
+          // In a real app, we'd pre-calc this map. For now, let's find the max price in data UP TO this point.
+          // Optimization: Pre-calc max for every index in 'data' before this loop?
+          // Let's rely on a helper or just scan. Scanning is O(N^2), bad.
+          // Let's pre-calc ATH map above the loop.
+
 
           // DCA Strict mode: skip all rules, just invest base amount
           if (useDcaStrict) {
@@ -623,6 +680,37 @@ const DcaBacktester: React.FC = () => {
           if (useVixRule && maxVixSincePrev > vixThreshold) {
             multiplier += (vixMultiplier - 1);
             reasons.push(`🔥 VIX>${vixThreshold} (max:${maxVixSincePrev.toFixed(0)}) x${vixMultiplier}`);
+          }
+
+          // Drawdown Strategy
+          if (useDrawdownRule) {
+            const currentAth = athMap.get(pt.date) || pt.price; // Fallback to current price if missing (shouldn't happen)
+            const drawdownPct = ((currentAth - pt.price) / currentAth) * 100;
+
+            // Check thresholds descending
+            if (drawdownPct >= drawdownThreshold3) {
+              multiplier += (drawdownMultiplier3 - 1);
+              reasons.push(`🔻 Drawdown -${drawdownPct.toFixed(1)}% (>${drawdownThreshold3}%) x${drawdownMultiplier3}`);
+            } else if (drawdownPct >= drawdownThreshold2) {
+              multiplier += (drawdownMultiplier2 - 1);
+              reasons.push(`🔻 Drawdown -${drawdownPct.toFixed(1)}% (>${drawdownThreshold2}%) x${drawdownMultiplier2}`);
+            } else if (drawdownPct >= drawdownThreshold1) {
+              multiplier += (drawdownMultiplier1 - 1);
+              reasons.push(`🔻 Drawdown -${drawdownPct.toFixed(1)}% (>${drawdownThreshold1}%) x${drawdownMultiplier1}`);
+            }
+          }
+
+          // Rule: MACD Reversal (Histogram < 0 and increasing)
+          if (useMacdStrategy && macdReversalMap.get(pt.date)) {
+            multiplier += (macdMultiplier - 1);
+            reasons.push(`🔄 MACD Reversal x${macdMultiplier}`);
+          }
+
+          // Rule: Bollinger Bands (Price < Lower Band)
+          const lowerBandPrice = bollingerLowerMap.get(pt.date);
+          if (useBollingerBand && lowerBandPrice && pt.price < lowerBandPrice) {
+            multiplier += (bollingerMultiplier - 1);
+            reasons.push(`📉 Bollinger Bas (-2σ) x${bollingerMultiplier}`);
           }
 
           const finalAmount = amount * multiplier;
@@ -759,6 +847,17 @@ const DcaBacktester: React.FC = () => {
         sma200Multiplier={sma200Multiplier} setSma200Multiplier={setSma200Multiplier}
         vixMultiplier={vixMultiplier} setVixMultiplier={setVixMultiplier}
         vixThreshold={vixThreshold} setVixThreshold={setVixThreshold}
+        useDrawdownRule={useDrawdownRule} setUseDrawdownRule={setUseDrawdownRule}
+        drawdownThreshold1={drawdownThreshold1} setDrawdownThreshold1={setDrawdownThreshold1}
+        drawdownThreshold2={drawdownThreshold2} setDrawdownThreshold2={setDrawdownThreshold2}
+        drawdownThreshold3={drawdownThreshold3} setDrawdownThreshold3={setDrawdownThreshold3}
+        drawdownMultiplier1={drawdownMultiplier1} setDrawdownMultiplier1={setDrawdownMultiplier1}
+        drawdownMultiplier2={drawdownMultiplier2} setDrawdownMultiplier2={setDrawdownMultiplier2}
+        drawdownMultiplier3={drawdownMultiplier3} setDrawdownMultiplier3={setDrawdownMultiplier3}
+        useMacdStrategy={useMacdStrategy} setUseMacdStrategy={setUseMacdStrategy}
+        macdMultiplier={macdMultiplier} setMacdMultiplier={setMacdMultiplier}
+        useBollingerBand={useBollingerBand} setUseBollingerBand={setUseBollingerBand}
+        bollingerMultiplier={bollingerMultiplier} setBollingerMultiplier={setBollingerMultiplier}
         usePortfolio={usePortfolio} setUsePortfolio={setUsePortfolio}
         backendStatus={backendStatus} portfolioTxsCount={portfolioTxs.length}
         runBacktest={runBacktest} isLoading={isLoading} error={error}
