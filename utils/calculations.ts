@@ -473,28 +473,18 @@ export const resampleToMonthly = (dailyPrices: Array<{ date: string; price: numb
 
 /**
  * Calculate average purchase price (cost basis per share)
- * 
- * @returns Average price per share, or NaN if no shares accumulated
  */
 export const calculateAveragePurchasePrice = (transactions: DcaTransaction[]): number => {
-  if (transactions.length === 0) return NaN;
+  if (transactions.length === 0) return 0;
   const lastTx = transactions[transactions.length - 1];
-
-  // Fix: Return NaN instead of 0 to signal invalid state
-  // This prevents masking data issues (0 could be mistaken for a valid result)
-  if (lastTx.accumulatedShares === 0) return NaN;
+  if (lastTx.accumulatedShares === 0) return 0;
 
   const totalInvested = transactions.reduce((sum, tx) => sum + tx.investedAmount, 0);
   return totalInvested / lastTx.accumulatedShares;
 };
 
 /**
- * Calculate best and worst months based on portfolio value changes
- * 
- * Monthly return = (EndOfMonthValue - StartOfMonthValue) / StartOfMonthValue
- * 
- * Note: This compares portfolio values at month boundaries. For DCA,
- * this includes both price changes AND new investments.
+ * Calculate best and worst months
  */
 export const calculateBestWorstMonths = (
   transactions: DcaTransaction[]
@@ -506,38 +496,26 @@ export const calculateBestWorstMonths = (
     };
   }
 
-  // Group transactions by month and calculate returns
+  // Group by month and calculate monthly returns
   const monthlyReturns: Array<{ month: string; return: number }> = [];
-
-  // Track: value at START of current month (first transaction of month)
-  let monthStartValue = transactions[0].portfolioValue;
+  let prevMonthValue = transactions[0].portfolioValue;
   let currentMonth = transactions[0].date.substring(0, 7);
 
   for (let i = 1; i < transactions.length; i++) {
     const txMonth = transactions[i].date.substring(0, 7);
 
     if (txMonth !== currentMonth) {
-      // Month changed! Calculate return for the COMPLETED month
-      // End value = last transaction of the previous month (transactions[i-1])
-      const monthEndValue = transactions[i - 1].portfolioValue;
-
-      if (monthStartValue > 0) {
-        const monthReturn = ((monthEndValue - monthStartValue) / monthStartValue) * 100;
-        monthlyReturns.push({ month: currentMonth, return: monthReturn });
-      }
-
-      // Reset for new month: start value = first transaction of new month
-      monthStartValue = transactions[i].portfolioValue;
+      const monthReturn = (transactions[i - 1].portfolioValue - prevMonthValue) / prevMonthValue;
+      monthlyReturns.push({ month: currentMonth, return: monthReturn * 100 });
+      prevMonthValue = transactions[i - 1].portfolioValue;
       currentMonth = txMonth;
     }
   }
 
-  // Add last (incomplete) month
+  // Add last month
   const lastTx = transactions[transactions.length - 1];
-  if (monthStartValue > 0 && lastTx.portfolioValue > 0) {
-    const lastReturn = ((lastTx.portfolioValue - monthStartValue) / monthStartValue) * 100;
-    monthlyReturns.push({ month: currentMonth, return: lastReturn });
-  }
+  const lastReturn = (lastTx.portfolioValue - prevMonthValue) / prevMonthValue;
+  monthlyReturns.push({ month: currentMonth, return: lastReturn * 100 });
 
   if (monthlyReturns.length === 0) {
     return {
