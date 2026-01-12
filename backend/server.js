@@ -42,6 +42,22 @@ let lastCoinGeckoRequest = 0;
 const db = new Database(DB_PATH);
 console.log(`📦 Connected to existing database: ${DB_PATH}`);
 
+// Initialize schema if not exists
+db.exec(`
+  CREATE TABLE IF NOT EXISTS transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    action TEXT NOT NULL,
+    ticker TEXT DEFAULT 'UNKNOWN',
+    quantity REAL NOT NULL,
+    unit_price REAL NOT NULL,
+    fees REAL DEFAULT 0,
+    total_cost REAL NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 // Check existing schema
 const tableInfo = db.prepare("PRAGMA table_info(transactions)").all();
 console.log('📊 Table schema:', tableInfo.map(c => c.name).join(', '));

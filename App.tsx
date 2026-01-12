@@ -1,5 +1,6 @@
 import React from 'react';
 import DcaBacktester from './features/dca/DcaBacktester';
+import { Toaster } from './components/ui/toaster';
 
 const App: React.FC = () => {
   return (
@@ -33,6 +34,7 @@ const App: React.FC = () => {
         <p>© 2024 DCA Analyzer. Données via CoinGecko & Yahoo Finance.</p>
         <p className="mt-1 text-xs">Calculs: CAGR, XIRR, Sharpe Ratio, Max Drawdown, Volatilité</p>
       </footer>
+      <Toaster />
     </div>
   );
 };
