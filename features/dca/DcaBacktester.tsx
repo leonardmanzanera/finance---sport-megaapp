@@ -880,6 +880,10 @@ const DcaBacktester: React.FC = () => {
             useSma50Rule={useSma50Rule}
             useSma200Rule={useSma200Rule}
             useVixRule={useVixRule}
+            useRsiRule={useRsiRule}
+            useMacdStrategy={useMacdStrategy}
+            useBollingerBand={useBollingerBand}
+            useDrawdownRule={useDrawdownRule}
             isLoading={isLoading}
           />
 

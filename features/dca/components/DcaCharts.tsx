@@ -16,6 +16,10 @@ interface DcaChartsProps {
     useSma50Rule: boolean;
     useSma200Rule: boolean;
     useVixRule: boolean;
+    useRsiRule: boolean;
+    useMacdStrategy: boolean;
+    useBollingerBand: boolean;
+    useDrawdownRule: boolean;
     isLoading?: boolean;
 }
 
@@ -29,6 +33,10 @@ const DcaCharts: React.FC<DcaChartsProps> = ({
     useSma50Rule,
     useSma200Rule,
     useVixRule,
+    useRsiRule,
+    useMacdStrategy,
+    useBollingerBand,
+    useDrawdownRule,
     isLoading
 }) => {
     if (isLoading) {
@@ -180,6 +188,78 @@ const DcaCharts: React.FC<DcaChartsProps> = ({
                                         y={pt.price}
                                         r={4}
                                         fill="#EF4444"
+                                        stroke="#fff"
+                                        strokeWidth={1}
+                                    />
+                                ) : null;
+                            })}
+
+                        {/* Smart Rule Trigger Markers - RSI (Pink) */}
+                        {useRsiRule && transactions
+                            .filter(tx => tx.reason?.includes('RSI'))
+                            .map((tx, idx) => {
+                                const pt = marketData.find(m => m.date === tx.date);
+                                return pt ? (
+                                    <ReferenceDot
+                                        key={`rsi-trigger-${idx}`}
+                                        x={tx.date}
+                                        y={pt.price}
+                                        r={4}
+                                        fill="#EC4899"
+                                        stroke="#fff"
+                                        strokeWidth={1}
+                                    />
+                                ) : null;
+                            })}
+
+                        {/* Smart Rule Trigger Markers - MACD (Orange) */}
+                        {useMacdStrategy && transactions
+                            .filter(tx => tx.reason?.includes('MACD'))
+                            .map((tx, idx) => {
+                                const pt = marketData.find(m => m.date === tx.date);
+                                return pt ? (
+                                    <ReferenceDot
+                                        key={`macd-trigger-${idx}`}
+                                        x={tx.date}
+                                        y={pt.price}
+                                        r={4}
+                                        fill="#F97316"
+                                        stroke="#fff"
+                                        strokeWidth={1}
+                                    />
+                                ) : null;
+                            })}
+
+                        {/* Smart Rule Trigger Markers - Bollinger (Yellow) */}
+                        {useBollingerBand && transactions
+                            .filter(tx => tx.reason?.includes('Bollinger'))
+                            .map((tx, idx) => {
+                                const pt = marketData.find(m => m.date === tx.date);
+                                return pt ? (
+                                    <ReferenceDot
+                                        key={`bollinger-trigger-${idx}`}
+                                        x={tx.date}
+                                        y={pt.price}
+                                        r={4}
+                                        fill="#EAB308"
+                                        stroke="#fff"
+                                        strokeWidth={1}
+                                    />
+                                ) : null;
+                            })}
+
+                        {/* Smart Rule Trigger Markers - Drawdown (Dark Red) */}
+                        {useDrawdownRule && transactions
+                            .filter(tx => tx.reason?.includes('Drawdown'))
+                            .map((tx, idx) => {
+                                const pt = marketData.find(m => m.date === tx.date);
+                                return pt ? (
+                                    <ReferenceDot
+                                        key={`drawdown-trigger-${idx}`}
+                                        x={tx.date}
+                                        y={pt.price}
+                                        r={4}
+                                        fill="#B91C1C"
                                         stroke="#fff"
                                         strokeWidth={1}
                                     />
